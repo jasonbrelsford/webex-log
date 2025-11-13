@@ -12,6 +12,11 @@ __pycache__/
 # Output directory
 webex_messages_by_day/
 
+# Generated visualizations
+*.html
+*.png
+webex_graph*.json
+
 # Environment variables and tokens
 .env
 config.py

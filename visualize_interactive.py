@@ -177,6 +177,34 @@ def generate_html(graph_data):
             margin: 10px 0;
             font-size: 14px;
         }
+        .controls input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            margin: 10px 0;
+            background: rgba(50, 50, 50, 0.8);
+            border: 1px solid #555;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 14px;
+        }
+        .controls input[type="text"]:focus {
+            outline: none;
+            border-color: #4a9eff;
+        }
+        .controls button {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            background: #4a9eff;
+            border: none;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .controls button:hover {
+            background: #3a8eef;
+        }
         .legend {
             position: fixed;
             bottom: 20px;
@@ -205,9 +233,23 @@ def generate_html(graph_data):
     
     <div class="controls">
         <h3>Webex Message Network</h3>
+        
+        <input type="text" id="search-input" placeholder="Search nodes...">
+        
         <label>
             <input type="checkbox" id="show-labels" checked> Show Labels
         </label>
+        
+        <label>
+            <input type="checkbox" id="filter-rooms" checked> Show Rooms
+        </label>
+        
+        <label>
+            <input type="checkbox" id="filter-people" checked> Show People
+        </label>
+        
+        <button onclick="exportData()">Export JSON</button>
+        <button onclick="resetView()">Reset View</button>
     </div>
     
     <div class="legend">
@@ -369,10 +411,83 @@ def generate_html(graph_data):
             document.getElementById('info-panel').classList.remove('visible');
         }
         
+        function exportData() {
+            const dataStr = JSON.stringify(graphData, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'webex_graph_data.json';
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        function resetView() {
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity
+            );
+            simulation.alpha(1).restart();
+        }
+        
         // Toggle labels
         document.getElementById('show-labels').addEventListener('change', (e) => {
             labels.style('display', e.target.checked ? 'block' : 'none');
         });
+        
+        // Search functionality
+        let searchTimeout;
+        document.getElementById('search-input').addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                const query = e.target.value.toLowerCase();
+                
+                node.style('opacity', d => {
+                    if (!query) return 1;
+                    return d.label.toLowerCase().includes(query) ? 1 : 0.2;
+                });
+                
+                labels.style('opacity', d => {
+                    if (!query) return 1;
+                    return d.label.toLowerCase().includes(query) ? 1 : 0.2;
+                });
+                
+                link.style('opacity', d => {
+                    if (!query) return 0.6;
+                    const sourceMatch = d.source.label.toLowerCase().includes(query);
+                    const targetMatch = d.target.label.toLowerCase().includes(query);
+                    return (sourceMatch || targetMatch) ? 0.6 : 0.1;
+                });
+            }, 300);
+        });
+        
+        // Filter by type
+        document.getElementById('filter-rooms').addEventListener('change', updateFilters);
+        document.getElementById('filter-people').addEventListener('change', updateFilters);
+        
+        function updateFilters() {
+            const showRooms = document.getElementById('filter-rooms').checked;
+            const showPeople = document.getElementById('filter-people').checked;
+            
+            node.style('display', d => {
+                if (d.type === 'room' && !showRooms) return 'none';
+                if (d.type === 'person' && !showPeople) return 'none';
+                return 'block';
+            });
+            
+            labels.style('display', d => {
+                if (d.type === 'room' && !showRooms) return 'none';
+                if (d.type === 'person' && !showPeople) return 'none';
+                const showLabelsChecked = document.getElementById('show-labels').checked;
+                return showLabelsChecked ? 'block' : 'none';
+            });
+            
+            link.style('display', d => {
+                const sourceVisible = (d.source.type === 'room' && showRooms) || (d.source.type === 'person' && showPeople);
+                const targetVisible = (d.target.type === 'room' && showRooms) || (d.target.type === 'person' && showPeople);
+                return (sourceVisible && targetVisible) ? 'block' : 'none';
+            });
+        }
     </script>
 </body>
 </html>"""
