@@ -52,10 +52,30 @@ Where involvement levels are:
 - `mentioned`: Messages where you were mentioned
 - `participant`: Messages from rooms you're in
 
+## Visualization
+
+This project includes interactive graph visualization tools. See [README_GRAPH.md](README_GRAPH.md) for details.
+
+**Quick start:**
+```bash
+python visualize_interactive.py
+```
+
+Creates an interactive Neo4j-style graph showing your message network with draggable, clickable bubbles.
+
 ## Files
 
-- `webex-log.py`: Main script that downloads all messages and saves them to dated text files in `webex_messages_by_day/` directory
+### Core Tools
+- `webex-log.py`: Main script that downloads all messages and saves them to dated text files
 - `config.py`: Configuration file for your Webex token and email (not committed to git)
+
+### Visualization (graph-ai branch)
+- `visualize_interactive.py`: Interactive HTML graph visualization
+- `visualize_graph.py`: Static PNG graph visualization
+- `TECH_STACK.md`: Full technical roadmap for SaaS platform
+- `README_GRAPH.md`: Visualization documentation
+
+### Configuration
 - `requirements.txt`: Python dependencies
 - `setup.py`: Package setup configuration
 - `.gitignore`: Protects sensitive files from being committed
@@ -65,6 +85,18 @@ Where involvement levels are:
 - `requests`: HTTP API calls
 - `networkx`: Network analysis (optional)
 - `matplotlib`: Data visualization (optional)
+
+## Querying Your Messages
+
+If you're using an IDE with Amazon Q or similar AI assistant, you can query your messages naturally:
+
+1. Reference the messages folder with `@webex_messages_by_day`
+2. Ask questions like:
+   - "When did I last discuss terraform in @webex_messages_by_day?"
+   - "Find conversations about AWS in @webex_messages_by_day"
+   - "Who did I talk to about the database upgrade in @webex_messages_by_day?"
+
+The AI assistant can read and search through your saved messages to answer questions in natural language.
 
 ## Security Note
 
