@@ -177,7 +177,8 @@ def generate_html(graph_data):
             margin: 10px 0;
             font-size: 14px;
         }
-        .controls input[type="text"] {
+        .controls input[type="text"],
+        .controls input[type="date"] {
             width: 100%;
             padding: 8px;
             margin: 10px 0;
@@ -187,9 +188,24 @@ def generate_html(graph_data):
             color: #fff;
             font-size: 14px;
         }
-        .controls input[type="text"]:focus {
+        .controls input[type="text"]:focus,
+        .controls input[type="date"]:focus {
             outline: none;
             border-color: #4a9eff;
+        }
+        .controls input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+        }
+        .date-range {
+            margin: 15px 0;
+            padding: 10px 0;
+            border-top: 1px solid #444;
+            border-bottom: 1px solid #444;
+        }
+        .date-range h4 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            color: #4a9eff;
         }
         .controls button {
             width: 100%;
@@ -236,6 +252,16 @@ def generate_html(graph_data):
         
         <input type="text" id="search-input" placeholder="Search nodes...">
         
+        <div class="date-range">
+            <h4>Date Range Filter</h4>
+            <label style="font-size: 12px; color: #888;">Start Date</label>
+            <input type="date" id="start-date">
+            <label style="font-size: 12px; color: #888;">End Date</label>
+            <input type="date" id="end-date">
+            <button onclick="applyDateFilter()">Apply Filter</button>
+            <button onclick="clearDateFilter()">Clear</button>
+        </div>
+        
         <label>
             <input type="checkbox" id="show-labels" checked> Show Labels
         </label>
@@ -269,7 +295,13 @@ def generate_html(graph_data):
     </div>
 
     <script>
-        const graphData = """ + json.dumps(graph_data) + """;
+        let graphData = """ + json.dumps(graph_data) + """;
+        
+        // Check for filtered data FIRST
+        const filtered = sessionStorage.getItem('filteredGraphData');
+        if (filtered) {
+            graphData = JSON.parse(filtered);
+        }
         
         const width = window.innerWidth;
         const height = window.innerHeight;
@@ -428,6 +460,80 @@ def generate_html(graph_data):
                 d3.zoomIdentity
             );
             simulation.alpha(1).restart();
+        }
+        
+        // Date filtering
+        let originalGraphData = JSON.parse(JSON.stringify(graphData));
+        
+        function applyDateFilter() {
+            const startDate = document.getElementById('start-date').value;
+            const endDate = document.getElementById('end-date').value;
+            
+            if (!startDate && !endDate) {
+                alert('Please select at least one date');
+                return;
+            }
+            
+            const start = startDate ? new Date(startDate) : new Date('1970-01-01');
+            const end = endDate ? new Date(endDate) : new Date('2099-12-31');
+            end.setHours(23, 59, 59, 999);
+            
+            // Filter messages by date
+            const filteredNodes = {};
+            
+            originalGraphData.nodes.forEach(node => {
+                const filteredMessages = node.messages.filter(msg => {
+                    const msgDate = new Date(msg.timestamp);
+                    return msgDate >= start && msgDate <= end;
+                });
+                
+                if (filteredMessages.length > 0) {
+                    filteredNodes[node.id] = {
+                        ...node,
+                        messages: filteredMessages,
+                        count: filteredMessages.length
+                    };
+                }
+            });
+            
+            // Filter and rebuild links
+            const filteredLinks = [];
+            const nodeIds = new Set(Object.keys(filteredNodes));
+            
+            originalGraphData.links.forEach(link => {
+                const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
+                const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+                
+                if (nodeIds.has(sourceId) && nodeIds.has(targetId)) {
+                    filteredLinks.push({
+                        source: sourceId,
+                        target: targetId,
+                        value: link.value
+                    });
+                }
+            });
+            
+            // Rebuild graph with filtered data
+            const newGraphData = {
+                nodes: Object.values(filteredNodes),
+                links: filteredLinks
+            };
+            
+            if (newGraphData.nodes.length === 0) {
+                alert('No messages found in this date range');
+                return;
+            }
+            
+            // Reload visualization
+            sessionStorage.setItem('filteredGraphData', JSON.stringify(newGraphData));
+            location.reload();
+        }
+        
+        function clearDateFilter() {
+            document.getElementById('start-date').value = '';
+            document.getElementById('end-date').value = '';
+            sessionStorage.removeItem('filteredGraphData');
+            location.reload();
         }
         
         // Toggle labels
